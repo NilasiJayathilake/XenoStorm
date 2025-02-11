@@ -3,10 +3,13 @@ package com.example.xenostorm
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 
 import androidx.compose.foundation.layout.Box
@@ -20,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
@@ -34,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.LineHeightStyle.Alignment.Companion
 
@@ -58,8 +64,9 @@ fun GUI(){
     background(Color.hsv(270f, 0.8f, 0.1f))
         .fillMaxSize()){
         Circle()
-        Box(modifier = Modifier.align(Alignment.BottomCenter)){
-            Shooter()
+
+        Box(modifier = Modifier.align(Alignment.BottomCenter).offset(y=-10.dp)){
+            DragShooter()
         }
 
     }
@@ -73,6 +80,8 @@ fun Circle(){
     // x and y will remember the balls position
     var x by remember { mutableStateOf(100f) }
     var y by remember {mutableStateOf(200f)}
+
+//    val cornerRadius by animateDpAsState(targetValue = 50.dp, animationSpec = tween(1000))
 
     val smoothX by animateFloatAsState(targetValue = x, animationSpec = tween(500)) // animationSpec makes it more smoother
     val smoothY by animateFloatAsState(targetValue = y, animationSpec = tween(500))
@@ -99,24 +108,42 @@ fun Circle(){
     }
 }
 @Composable
-fun Shooter(){
-//
-//        Box(modifier = Modifier.clip(RectangleShape)
-//            .background(Color.Cyan)
-//            .size(100.dp,20.dp)
-//            )
-    Box(
+fun DragShooter(){
+    // Stores the Position of the Shooter and its changes dynamically
+    var shooterX by remember { mutableStateOf(0f) }
+
+
+    var containerWidth by remember { mutableStateOf(0) }
+    var shooterWidth = 50.dp;
+
+    Box( // Shooter Bar
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp)
-            .background(Color.DarkGray),
-        contentAlignment = Alignment.Center
+            .height(50.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.Black)
+            .onSizeChanged { containerWidth = it.width}, // stores the container width in pixels
+        contentAlignment = Alignment.Center,
+
     ) {
-        Box(
+        Box( // Shooter Box: Capable of Moving when Clicked and Dragged
             modifier = Modifier
-                .size(100.dp, 20.dp)
-                .clip(RectangleShape)
-                .background(Color.Cyan)
+                .offset(shooterX.dp)
+                .pointerInput(Unit){ // Pointer Input will Detect the Pointer Movements
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        // turning to density pixels dp cause offset returns pixels and pointerInput needs to be in dp
+                        val newX = shooterX + dragAmount.x / density
+                        val  containerWidthInDP = containerWidth / density
+                        shooterX = newX.coerceIn(
+                            minimumValue = -(containerWidthInDP - shooterWidth.value) / 2,
+                            maximumValue = (containerWidthInDP - shooterWidth.value) / 2 )
+                        // Calculations Made to make sure the shooter doesn't move out of the Shooter's Container
+                    }
+                }
+                .size(shooterWidth, 30.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.hsv(200f, 1f, 1f))
         )
     }
 
