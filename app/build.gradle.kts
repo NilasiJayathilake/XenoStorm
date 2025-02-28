@@ -8,6 +8,7 @@ android {
     namespace = "com.example.xenostorm"
     compileSdk = 35
 
+
     defaultConfig {
         applicationId = "com.example.xenostorm"
         minSdk = 24
