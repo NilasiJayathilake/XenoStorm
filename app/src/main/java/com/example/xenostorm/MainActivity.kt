@@ -3,21 +3,30 @@ package com.example.xenostorm
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,11 +42,13 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
-
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.LineHeightStyle.Alignment.Companion
 
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-
+import androidx.compose.ui.unit.sp
 
 import kotlinx.coroutines.delay
 import java.util.concurrent.atomic.AtomicInteger
@@ -68,8 +79,76 @@ data class Asteroid(
     val id: Int, // will generate a unique id to each asteroid
     val x: Float, // will hold an asteroid's x position
     val y: Float,  // will hold an asteroid's y position
-    val startedFromMiddle: Boolean
+    val startedFromMiddle: Boolean,
+    val variant: Int = 0, // Which asteroid shape to use
+    val rotation: Float = 0f, // Rotation angle
+    val scale: Float = 1f
 )
+@Composable
+fun RealisticAsteroid(
+    modifier: Modifier = Modifier,
+    variant: Int = 1,
+    rotation: Float = 0f,
+    startedFromMiddle: Boolean = false
+) {
+    // Choose base color based on origin
+    val baseColor = when {
+        startedFromMiddle -> Color(0xFF6B4226) // Meteor Dust Brown for center-spawned asteroids
+        variant % 4 == 0 -> Color(0xFF4A4A4A) // Dark Rock Gray
+        variant % 4 == 1 -> Color(0xFF9E550E) // Rusty Orange
+        variant % 4 == 2 -> Color(0xFFB0B0B0) // Metallic Silver
+        else -> Color(0xFF202020) // Charcoal Black
+    }
+
+    // Create a random variation in the color
+    val colorVariation = -0.1f + Random.nextFloat() * 0.2f
+    val adjustedColor = Color(
+        red = (baseColor.red + colorVariation).coerceIn(0f, 1f),
+        green = (baseColor.green + colorVariation).coerceIn(0f, 1f),
+        blue = (baseColor.blue + colorVariation).coerceIn(0f, 1f),
+        alpha = 1f
+    )
+
+    // Create a custom shape for the asteroid based on variant
+    val shape = when (variant) {
+        0 -> RoundedCornerShape(
+            topStart = 30.dp,
+            topEnd = 10.dp,
+            bottomStart = 8.dp,
+            bottomEnd = 20.dp
+        )
+        1 -> RoundedCornerShape(
+            topStart = 15.dp,
+            topEnd = 25.dp,
+            bottomStart = 20.dp,
+            bottomEnd = 10.dp
+        )
+        2 -> RoundedCornerShape(
+            topStart = 20.dp,
+            topEnd = 8.dp,
+            bottomStart = 25.dp,
+            bottomEnd = 15.dp
+        )
+        else -> RoundedCornerShape(
+            topStart = 12.dp,
+            topEnd = 22.dp,
+            bottomStart = 10.dp,
+            bottomEnd = 25.dp
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(adjustedColor)
+            // Optional: Add a rougher texture with a border
+            .border(
+                width = 1.dp,
+                color = Color.Black.copy(alpha = 0.3f),
+                shape = shape
+            )
+    )
+}
 @Composable
 fun FallingAsteroids(){
     var asteroids by remember { mutableStateOf(listOf<Asteroid>()) }
@@ -78,7 +157,7 @@ fun FallingAsteroids(){
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp.value;
     val speed = 3f;
     val xspeed = 3f;
-    val yspeed = 5f; // can change these to make the game harder or easier
+    val yspeed = 5f;
     val asteroidSize = 50.dp;
     val idCounter = remember { AtomicInteger(0) }
 
@@ -96,7 +175,10 @@ fun FallingAsteroids(){
                 id = idCounter.incrementAndGet(),
                 x = (Math.random() * (screenWidth - asteroidSize.value*2)).toFloat(),
                 y= startY,
-                startedFromMiddle = startFromMiddle
+                startedFromMiddle = startFromMiddle,
+                variant = Random.nextInt(4), // Random shape variant (0-3)
+                rotation = Random.nextFloat() * 360f, // Random rotation
+                scale = 0.8f + Random.nextFloat() * 0.4f
             )
             asteroids += newAsteroid; // Adding the new Asteroids to the List
             asteroids = asteroids.filter {
@@ -117,10 +199,14 @@ fun FallingAsteroids(){
     }
     Box(modifier = Modifier.fillMaxSize()){
         asteroids.forEach{
-            asteroid -> Box(
-                modifier = Modifier.offset(asteroid.x.dp, asteroid.y.dp).size(asteroidSize).clip(
-                    CircleShape).background(Color.Yellow)
-            )
+            asteroid ->RealisticAsteroid(
+            modifier = Modifier
+                .offset(asteroid.x.dp, asteroid.y.dp)
+                .size((asteroidSize.value * asteroid.scale).dp),
+            variant = asteroid.variant,
+            rotation = asteroid.rotation,
+            startedFromMiddle = asteroid.startedFromMiddle
+        )
         }
     }
 
